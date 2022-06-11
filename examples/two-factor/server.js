@@ -57,6 +57,7 @@ function saveKeyForUserId(id, key, fn) {
 }
 
 function ensureSecondFactor(req, res, next) {
+  console.log('secondFactor: ', req.session.secondFactor)
   if (req.session.secondFactor == 'totp') {
     return next();
   }
@@ -168,9 +169,15 @@ app.get('/setup', loggedin.ensureLoggedIn(), function (req, res, next) {
     if (err) {
       return next(err);
     }
+
+    console.log('==> obj: ', obj)
+
     if (obj) {
       qrcode.toDataURL(authenticator.keyuri(req.user.username, 'Some Random Header', obj.key))
         .then((qrImage) => {
+
+          console.log('encodedKey: ', encodedKey)
+
           res.render('setup', {
             user: req.user.username,
             key: encodedKey,
@@ -182,6 +189,9 @@ app.get('/setup', loggedin.ensureLoggedIn(), function (req, res, next) {
       var key = authenticator.generateSecret();
       qrcode.toDataURL(authenticator.keyuri(req.user.username, 'Some Random Header', key))
         .then((qrImage) => {
+          
+          console.log('qrImage: ', qrImage);
+          
           saveKeyForUserId(req.user.id, {
             key: key
           }, function (err) {
@@ -219,13 +229,16 @@ app.post('/login',
     failureFlash: true
   }),
   function (req, res) {
-    res.redirect('/');
+    // res.redirect('/');
+    // res.redirect('/setup');
+    res.redirect('/login-otp');
   });
 
 app.get('/login-otp', loggedin.ensureLoggedIn(),
   function (req, res, next) {
     // If user hasn't set up two-factor auth, redirect
     findKeyForUserId(req.user.id, function (err, obj) {
+      console.log('obj: ', obj);
       if (err) {
         return next(err);
       }
